@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather App</title>
+    <meta name="description" content="Ứng dụng xem thời tiết với dự báo 5 ngày, hỗ trợ tìm kiếm thành phố">
+    <title>Weather App - Dự báo thời tiết</title>
     <script src="js/all.min.js"></script>
     <script src="js/moment.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,46 +13,106 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
     <div class="container">
         <div class="main-section">
             <div class="loading-spinner" style="display:none;">
                 <div class="spinner"></div>
             </div>
-            <div class="search-bar">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" name="search-city" id="search-input" placeholder="Tìm kiếm thành phố..."> 
+            
+            <!-- Search Bar with Suggestions -->
+            <div class="search-wrapper">
+                <div class="search-bar">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" name="search-city" id="search-input" placeholder="Tìm kiếm thành phố..." autocomplete="off" aria-label="Tìm kiếm thành phố"> 
+                    <button class="search-btn" id="search-btn" aria-label="Tìm kiếm">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="search-suggestions" id="search-suggestions"></div>
+                <div class="search-history" id="search-history"></div>
             </div>
+
             <div class="date-time">
                 <p class="date" id="current-date"></p>
                 <p class="time" id="current-time"></p>
             </div>
+            
             <div class="info-wrapper">
                 <p class="city-name">Ho Chi Minh</p>
                 <p class="weather-state">may thua</p>
                 <img src="https://openweathermap.org/img/wn/10d@2x.png" alt="weather icon" class="weather-icon">
                 <p class="temperature">26</p>
+                <p class="feels-like">Cảm giác như <span class="feels-like-temp">24</span>°</p>
             </div>
         </div>
+        
+        <!-- Additional Weather Info -->
         <div class="additional-section">
             <div class="row">
                 <div class="item">
+                    <i class="fas fa-sunrise item-icon"></i>
                     <div class="label">Mặt Trời Mọc</div>
                     <div class="value sunrise">6:16</div>
                 </div>
                 <div class="item">
-                    <div class="label">Mặt Trời Lặng</div>
+                    <i class="fas fa-sunset item-icon"></i>
+                    <div class="label">Mặt Trời Lặn</div>
                     <div class="value sunset">17:57</div>
                 </div>
             </div>
-            <div class="row"></div>
+            <div class="row">
                 <div class="item">
+                    <i class="fas fa-tint item-icon"></i>
                     <div class="label">Độ ẩm</div>
                     <div class="value"><span class="humidity">73</span>%</div>
                 </div>
                 <div class="item">
+                    <i class="fas fa-wind item-icon"></i>
                     <div class="label">Gió</div>
                     <div class="value"><span class="wind-speed">5.54</span>km/h</div>
                 </div>
+            </div>
+            <div class="row">
+                <div class="item">
+                    <i class="fas fa-compress-arrows-alt item-icon"></i>
+                    <div class="label">Áp suất</div>
+                    <div class="value"><span class="pressure">1013</span>hPa</div>
+                </div>
+                <div class="item">
+                    <i class="fas fa-eye item-icon"></i>
+                    <div class="label">Tầm nhìn</div>
+                    <div class="value"><span class="visibility">10</span>km</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5-Day Forecast -->
+        <div class="forecast-section">
+            <h3 class="forecast-title">Dự báo 5 ngày</h3>
+            <div class="forecast-container" id="forecast-container">
+                <!-- Forecast items will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Saved Locations -->
+        <div class="saved-locations-section">
+            <div class="saved-locations-header">
+                <h3 class="saved-locations-title">Địa điểm đã lưu</h3>
+                <button class="add-location-btn" id="add-location-btn" title="Lưu địa điểm hiện tại">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="saved-locations-container" id="saved-locations-container">
+                <!-- Saved locations will be inserted here -->
+            </div>
         </div>
     </div>
     <script src="js/index.js"></script>
