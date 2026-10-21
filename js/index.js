@@ -59,6 +59,7 @@ let searchTimeout = null;
 function init() {
     loadTheme();
     setupEventListeners();
+    setupPWA();
     updateDateTime();
     setInterval(updateDateTime, 1000);
     loadInitialWeather();
@@ -66,6 +67,13 @@ function init() {
 }
 
 function loadInitialWeather() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const cityParam = urlParams.get('city');
+    if (cityParam) {
+        fetchWeatherByCity(cityParam);
+        return;
+    }
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -504,7 +512,101 @@ function showToast(message, type = 'info') {
 }
 
 // ============================================
+// PWA (PROGRESSIVE WEB APP) SETUP
+// ============================================
+
+let deferredPrompt = null;
+
+function setupPWA() {
+    // 1. Register Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then((registration) => {
+                    console.log('PWA ServiceWorker registered with scope:', registration.scope);
+                })
+                .catch((error) => {
+                    console.error('PWA ServiceWorker registration failed:', error);
+                });
+        });
+    }
+
+    // 2. Install Prompt (Android / Chrome / Desktop)
+    const installBanner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('pwa-install-btn');
+    const dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+    if (installBanner && installBtn && dismissBtn) {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            const isDismissed = sessionStorage.getItem('pwa-install-dismissed');
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            
+            if (!isDismissed && !isStandalone) {
+                setTimeout(() => {
+                    installBanner.style.display = 'flex';
+                }, 1500);
+            }
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            installBanner.style.display = 'none';
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                showToast('Đang cài đặt ứng dụng Thời Tiết...', 'success');
+            }
+            deferredPrompt = null;
+        });
+
+        dismissBtn.addEventListener('click', () => {
+            installBanner.style.display = 'none';
+            sessionStorage.setItem('pwa-install-dismissed', 'true');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBanner.style.display = 'none';
+            showToast('Ứng dụng đã được thêm vào Màn hình chính! 🎉', 'success');
+        });
+    }
+
+    // 3. iOS Safari Guide Prompt
+    const iosPrompt = document.getElementById('ios-install-prompt');
+    const iosCloseBtn = document.getElementById('ios-prompt-close');
+    
+    if (iosPrompt && iosCloseBtn) {
+        const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const isIosDismissed = sessionStorage.getItem('ios-pwa-dismissed');
+
+        if (isIos && !isStandalone && !isIosDismissed) {
+            setTimeout(() => {
+                iosPrompt.style.display = 'block';
+            }, 3000);
+        }
+
+        iosCloseBtn.addEventListener('click', () => {
+            iosPrompt.style.display = 'none';
+            sessionStorage.setItem('ios-pwa-dismissed', 'true');
+        });
+    }
+
+    // 4. Online / Offline listeners
+    window.addEventListener('online', () => {
+        showToast('Đã kết nối lại Internet', 'success');
+    });
+
+    window.addEventListener('offline', () => {
+        showToast('Mất kết nối Internet. Đang dùng dữ liệu ngoại tuyến', 'error');
+    });
+}
+
+// ============================================
 // START APP
 // ============================================
 
 window.addEventListener('DOMContentLoaded', init);
+

@@ -2,9 +2,26 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Ứng dụng xem thời tiết với dự báo 5 ngày, hỗ trợ tìm kiếm thành phố">
     <title>Weather App - Dự báo thời tiết</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2193b0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Thời Tiết">
+    
+    <!-- iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Thời Tiết">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    
     <script src="js/all.min.js"></script>
     <script src="js/moment.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +30,31 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwa-install-banner" style="display: none;">
+        <div class="pwa-install-content">
+            <img src="icons/icon-96.png" alt="App Icon" class="pwa-app-icon">
+            <div class="pwa-install-text">
+                <span class="pwa-title">Cài đặt Ứng dụng</span>
+                <span class="pwa-desc">Thêm vào màn hình chính để dùng mượt hơn</span>
+            </div>
+        </div>
+        <div class="pwa-install-actions">
+            <button class="pwa-btn-install" id="pwa-install-btn">Cài đặt</button>
+            <button class="pwa-btn-dismiss" id="pwa-dismiss-btn" aria-label="Đóng">&times;</button>
+        </div>
+    </div>
+
+    <!-- iOS Install Guide Prompt -->
+    <div class="ios-install-prompt" id="ios-install-prompt" style="display: none;">
+        <div class="ios-prompt-content">
+            <div class="ios-prompt-text">
+                📲 Cài vào màn hình chính: Bấm nút <strong>Chia sẻ <i class="fas fa-share-square"></i></strong> ở thanh dưới Safari rồi chọn <strong>"Thêm vào MH chính"</strong>.
+            </div>
+            <button class="ios-prompt-close" id="ios-prompt-close" aria-label="Đóng">&times;</button>
+        </div>
+    </div>
+
     <!-- Theme Toggle -->
     <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
         <i class="fas fa-moon"></i>
