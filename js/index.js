@@ -41,15 +41,29 @@ const elements = {
     
     loadingSpinner: document.querySelector('.loading-spinner'),
     themeToggle: document.querySelector('#theme-toggle'),
-    toast: document.querySelector('#toast'),
+    currentLocationBtn: document.querySelector('#current-location-btn'),
+    unitToggleBtn: document.querySelector('#unit-toggle-btn'),
+    unitIndicator: document.querySelector('#unit-indicator'),
+    headerInstallBtn: document.querySelector('#header-install-btn'),
     
+    toast: document.querySelector('#toast'),
+    hourlyContainer: document.querySelector('#hourly-container'),
     forecastContainer: document.querySelector('#forecast-container'),
     savedLocationsContainer: document.querySelector('#saved-locations-container'),
-    addLocationBtn: document.querySelector('#add-location-btn')
+    addLocationBtn: document.querySelector('#add-location-btn'),
+    
+    // PWA Modal
+    pwaModalOverlay: document.querySelector('#pwa-modal-overlay'),
+    pwaModalClose: document.querySelector('#pwa-modal-close'),
+    pwaModalCloseBtn: document.querySelector('#pwa-modal-close-btn'),
+    pwaModalActionBtn: document.querySelector('#pwa-modal-action-btn'),
+    pwaModalBody: document.querySelector('#pwa-modal-body')
 };
 
 // State
 let currentWeatherData = null;
+let currentForecastData = null;
+let currentUnit = localStorage.getItem('weather-app-unit') || 'C'; // 'C' or 'F'
 let searchTimeout = null;
 
 // ============================================
@@ -58,6 +72,7 @@ let searchTimeout = null;
 
 function init() {
     loadTheme();
+    loadUnit();
     setupEventListeners();
     setupPWA();
     updateDateTime();
@@ -74,16 +89,27 @@ function loadInitialWeather() {
         return;
     }
 
+    getCurrentLocationWeather(true);
+}
+
+function getCurrentLocationWeather(silentFallback = false) {
     if (navigator.geolocation) {
+        if (!silentFallback) showLoading();
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 fetchWeatherByCoords(lat, lon);
+                if (!silentFallback) showToast('Đã định vị vị trí của bạn!', 'success');
             },
-            () => {
+            (error) => {
+                if (!silentFallback) {
+                    hideLoading();
+                    showToast('Không lấy được GPS, đang tải vị trí mặc định', 'info');
+                }
                 fetchWeatherByCity(CONFIG.DEFAULT_CITY);
-            }
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
         );
     } else {
         fetchWeatherByCity(CONFIG.DEFAULT_CITY);
@@ -103,8 +129,57 @@ function setupEventListeners() {
     elements.searchInput.addEventListener('focus', showSearchHistory);
     elements.searchBtn.addEventListener('click', handleSearch);
     
-    // Theme toggle
-    elements.themeToggle.addEventListener('click', toggleTheme);
+    // Theme toggle (Optimized for mobile touch & click)
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleTheme();
+        });
+    }
+    
+    // Current GPS Location
+    if (elements.currentLocationBtn) {
+        elements.currentLocationBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            getCurrentLocationWeather(false);
+        });
+    }
+    
+    // Unit Toggle (°C / °F)
+    if (elements.unitToggleBtn) {
+        elements.unitToggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleUnit();
+        });
+    }
+
+    // Header Install PWA button
+    if (elements.headerInstallBtn) {
+        elements.headerInstallBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleInstallClick();
+        });
+    }
+
+    // PWA Modal handlers
+    if (elements.pwaModalClose) elements.pwaModalClose.addEventListener('click', closeInstallModal);
+    if (elements.pwaModalCloseBtn) elements.pwaModalCloseBtn.addEventListener('click', closeInstallModal);
+    if (elements.pwaModalOverlay) {
+        elements.pwaModalOverlay.addEventListener('click', (e) => {
+            if (e.target === elements.pwaModalOverlay) closeInstallModal();
+        });
+    }
+    if (elements.pwaModalActionBtn) {
+        elements.pwaModalActionBtn.addEventListener('click', () => {
+            if (deferredPrompt) {
+                closeInstallModal();
+                deferredPrompt.prompt();
+            } else {
+                closeInstallModal();
+                showToast('Vui lòng làm theo hướng dẫn trên màn hình', 'info');
+            }
+        });
+    }
     
     // Add location
     elements.addLocationBtn.addEventListener('click', addCurrentLocation);
@@ -119,24 +194,53 @@ function setupEventListeners() {
 }
 
 // ============================================
-// THEME MANAGEMENT
+// THEME & UNIT MANAGEMENT
 // ============================================
 
 function loadTheme() {
     const savedTheme = localStorage.getItem(CONFIG.STORAGE_KEYS.THEME);
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
-        elements.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        if (elements.themeToggle) elements.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
     }
 }
 
 function toggleTheme() {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
-    elements.themeToggle.innerHTML = isDark 
-        ? '<i class="fas fa-sun"></i>' 
-        : '<i class="fas fa-moon"></i>';
+    if (elements.themeToggle) {
+        elements.themeToggle.innerHTML = isDark 
+            ? '<i class="fas fa-sun"></i>' 
+            : '<i class="fas fa-moon"></i>';
+    }
     localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+    showToast(isDark ? 'Đã bật chế độ Tối (Dark Mode)' : 'Đã bật chế độ Sáng (Light Mode)', 'info');
+}
+
+function loadUnit() {
+    if (elements.unitIndicator) {
+        elements.unitIndicator.textContent = `°${currentUnit}`;
+    }
+}
+
+function toggleUnit() {
+    currentUnit = currentUnit === 'C' ? 'F' : 'C';
+    localStorage.setItem('weather-app-unit', currentUnit);
+    loadUnit();
+    if (currentWeatherData) updateWeatherUI(currentWeatherData);
+    if (currentForecastData) {
+        updateForecastUI(currentForecastData);
+        updateHourlyUI(currentForecastData);
+    }
+    showToast(`Đã chuyển sang độ ${currentUnit === 'C' ? 'Celsius (°C)' : 'Fahrenheit (°F)'}`, 'info');
+}
+
+function formatTemp(celsius) {
+    if (celsius === undefined || celsius === null) return CONFIG.DEFAULT_VALUE;
+    if (currentUnit === 'F') {
+        return Math.round((celsius * 9) / 5 + 32);
+    }
+    return Math.round(celsius);
 }
 
 // ============================================
@@ -257,8 +361,10 @@ function fetchWeatherByCoords(lat, lon) {
     .then(([weatherData, forecastData]) => {
         if (weatherData.cod === 200) {
             currentWeatherData = weatherData;
+            currentForecastData = forecastData;
             updateWeatherUI(weatherData);
             updateForecastUI(forecastData);
+            updateHourlyUI(forecastData);
         } else {
             showToast('Không thể lấy dữ liệu thời tiết', 'error');
         }
@@ -283,9 +389,11 @@ function fetchWeatherByCity(city) {
     .then(([weatherData, forecastData]) => {
         if (weatherData.cod === 200) {
             currentWeatherData = weatherData;
+            currentForecastData = forecastData;
             updateWeatherUI(weatherData);
             updateForecastUI(forecastData);
-            showToast(`Đã tìm thấy thời tiết cho ${weatherData.name}`, 'success');
+            updateHourlyUI(forecastData);
+            showToast(`Đã cập nhật thời tiết cho ${weatherData.name}`, 'success');
         } else {
             showToast('Không tìm thấy thành phố. Vui lòng thử lại!', 'error');
         }
@@ -309,10 +417,10 @@ function updateWeatherUI(data) {
         ? `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`
         : '';
     elements.temperature.textContent = data.main?.temp !== undefined
-        ? Math.round(data.main.temp)
+        ? formatTemp(data.main.temp)
         : CONFIG.DEFAULT_VALUE;
     elements.feelsLikeTemp.textContent = data.main?.feels_like !== undefined
-        ? Math.round(data.main.feels_like)
+        ? formatTemp(data.main.feels_like)
         : CONFIG.DEFAULT_VALUE;
     elements.humidity.textContent = data.main?.humidity !== undefined
         ? data.main.humidity
@@ -332,6 +440,31 @@ function updateWeatherUI(data) {
     elements.sunset.textContent = data.sys?.sunset
         ? moment.unix(data.sys.sunset).format('H:mm')
         : CONFIG.DEFAULT_VALUE;
+}
+
+function updateHourlyUI(data) {
+    if (!data || !data.list || !elements.hourlyContainer) return;
+    
+    // Take the next 8 intervals (24 hours: 3h intervals)
+    const hourlyList = data.list.slice(0, 8);
+    
+    elements.hourlyContainer.innerHTML = hourlyList.map((item, index) => {
+        const date = new Date(item.dt * 1000);
+        const timeStr = index === 0 ? 'Bây giờ' : moment(date).format('HH:mm');
+        const temp = formatTemp(item.main.temp);
+        const icon = item.weather?.[0]?.icon || '01d';
+        const desc = item.weather?.[0]?.description || '';
+        const pop = Math.round((item.pop || 0) * 100);
+        
+        return `
+            <div class="hourly-item">
+                <div class="hourly-time">${timeStr}</div>
+                <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}" class="hourly-icon" loading="lazy">
+                <div class="hourly-temp">${temp}°</div>
+                ${pop > 0 ? `<div class="hourly-pop"><i class="fas fa-droplet"></i> ${pop}%</div>` : ''}
+            </div>
+        `;
+    }).join('');
 }
 
 function updateForecastUI(data) {
@@ -367,8 +500,8 @@ function updateForecastUI(data) {
         const dateStr = forecast.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
         
         // Calculate min and max temperature for the day
-        const maxTemp = Math.round(Math.max(...forecast.temps));
-        const minTemp = Math.round(Math.min(...forecast.temps));
+        const maxTemp = formatTemp(Math.max(...forecast.temps));
+        const minTemp = formatTemp(Math.min(...forecast.temps));
         
         return `
             <div class="forecast-item">
@@ -461,7 +594,7 @@ function loadSavedLocations() {
                              class="location-weather-icon">
                         <div class="location-details">
                             <div class="location-name">${data.name}</div>
-                            <div class="location-temp">${Math.round(data.main.temp)}° - ${data.weather[0].description}</div>
+                            <div class="location-temp">${formatTemp(data.main.temp)}° - ${data.weather[0].description}</div>
                         </div>
                     </div>
                     <div class="location-actions">
@@ -604,9 +737,75 @@ function setupPWA() {
     });
 }
 
+function handleInstallClick() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                showToast('Đang cài đặt ứng dụng Thời Tiết...', 'success');
+            }
+            deferredPrompt = null;
+        });
+    } else {
+        openInstallModal();
+    }
+}
+
+function openInstallModal() {
+    const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    
+    if (isStandalone) {
+        showToast('Ứng dụng đã được cài đặt trên thiết bị của bạn!', 'success');
+        return;
+    }
+
+    let guideHtml = '';
+    if (isIos) {
+        guideHtml = `
+            <div class="pwa-step-card">
+                <div class="pwa-step-num">1</div>
+                <div class="pwa-step-text">Bấm biểu tượng <strong>Chia sẻ (Share) <i class="fas fa-arrow-up-from-bracket"></i></strong> ở thanh công cụ dưới Safari.</div>
+            </div>
+            <div class="pwa-step-card">
+                <div class="pwa-step-num">2</div>
+                <div class="pwa-step-text">Cuộn xuống và chọn <strong>"Thêm vào Màn hình chính" (Add to Home Screen)</strong>.</div>
+            </div>
+            <div class="pwa-step-card">
+                <div class="pwa-step-num">3</div>
+                <div class="pwa-step-text">Bấm <strong>Thêm (Add)</strong> ở góc trên bên phải là hoàn tất!</div>
+            </div>
+        `;
+        if (elements.pwaModalActionBtn) elements.pwaModalActionBtn.style.display = 'none';
+    } else {
+        guideHtml = `
+            <div class="pwa-step-card">
+                <div class="pwa-step-num">1</div>
+                <div class="pwa-step-text">Bấm nút <strong>Menu 3 chấm <i class="fas fa-ellipsis-vertical"></i></strong> trên thanh công cụ của trình duyệt.</div>
+            </div>
+            <div class="pwa-step-card">
+                <div class="pwa-step-num">2</div>
+                <div class="pwa-step-text">Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào MH chính"</strong>.</div>
+            </div>
+        `;
+        if (elements.pwaModalActionBtn) {
+            elements.pwaModalActionBtn.style.display = 'block';
+            elements.pwaModalActionBtn.textContent = 'Cài đặt ngay';
+        }
+    }
+
+    if (elements.pwaModalBody) elements.pwaModalBody.innerHTML = guideHtml;
+    if (elements.pwaModalOverlay) elements.pwaModalOverlay.style.display = 'flex';
+}
+
+function closeInstallModal() {
+    if (elements.pwaModalOverlay) elements.pwaModalOverlay.style.display = 'none';
+}
+
 // ============================================
 // START APP
 // ============================================
 
 window.addEventListener('DOMContentLoaded', init);
+
 

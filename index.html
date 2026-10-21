@@ -55,15 +55,33 @@
         </div>
     </div>
 
-    <!-- Theme Toggle -->
-    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
-        <i class="fas fa-moon"></i>
-    </button>
-
     <!-- Toast Notification -->
     <div class="toast" id="toast"></div>
 
     <div class="container">
+        <!-- In-App Header Bar (Mobile Friendly, No Notch Conflict) -->
+        <header class="app-header">
+            <div class="app-brand">
+                <i class="fas fa-cloud-sun brand-icon"></i>
+                <span class="brand-title">Thời Tiết</span>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="current-location-btn" title="Vị trí của tôi (GPS)" aria-label="Lấy thời tiết theo GPS">
+                    <i class="fas fa-location-arrow"></i>
+                </button>
+                <button class="header-btn unit-toggle" id="unit-toggle-btn" title="Đổi đơn vị °C / °F" aria-label="Đổi đơn vị nhiệt độ">
+                    <span id="unit-indicator">°C</span>
+                </button>
+                <button class="header-btn install-btn" id="header-install-btn" title="Thêm vào màn hình chính" aria-label="Thêm vào màn hình chính">
+                    <i class="fas fa-arrow-down-to-bracket"></i>
+                    <span class="install-tag">Cài App</span>
+                </button>
+                <button class="header-btn theme-btn" id="theme-toggle" title="Đổi giao diện Sáng / Tối" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
         <div class="main-section">
             <div class="loading-spinner" style="display:none;">
                 <div class="spinner"></div>
@@ -136,6 +154,16 @@
             </div>
         </div>
 
+        <!-- 24-Hour Hourly Forecast -->
+        <div class="hourly-section">
+            <div class="section-header">
+                <h3 class="forecast-title"><i class="far fa-clock"></i> Dự báo 24 giờ tới</h3>
+            </div>
+            <div class="hourly-container" id="hourly-container">
+                <!-- Hourly forecast items will be inserted here -->
+            </div>
+        </div>
+
         <!-- 5-Day Forecast -->
         <div class="forecast-section">
             <h3 class="forecast-title">Dự báo 5 ngày</h3>
@@ -157,6 +185,28 @@
             </div>
         </div>
     </div>
+
+    <!-- PWA Install Guide Modal (Tailored for iOS & Android) -->
+    <div class="pwa-modal-overlay" id="pwa-modal-overlay" style="display: none;">
+        <div class="pwa-modal-card">
+            <button class="pwa-modal-close" id="pwa-modal-close" aria-label="Đóng">&times;</button>
+            <div class="pwa-modal-header">
+                <img src="icons/icon-96.png" alt="App Icon" class="pwa-modal-app-icon">
+                <div>
+                    <h3 class="pwa-modal-title">Cài Đặt "Thời Tiết"</h3>
+                    <p class="pwa-modal-sub">Trải nghiệm full màn hình, xem offline cực nhanh</p>
+                </div>
+            </div>
+            <div class="pwa-modal-body" id="pwa-modal-body">
+                <!-- Dynamically filled with specific instructions for iOS, Chrome, Android -->
+            </div>
+            <div class="pwa-modal-footer">
+                <button class="pwa-modal-btn primary" id="pwa-modal-action-btn">Cài đặt ngay</button>
+                <button class="pwa-modal-btn secondary" id="pwa-modal-close-btn">Để sau</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/index.js"></script>
 </body>
 </html>

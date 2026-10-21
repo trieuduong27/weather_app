@@ -1,5 +1,5 @@
 // Service Worker for Weather App PWA
-const CACHE_VERSION = 'weather-app-v1';
+const CACHE_VERSION = 'weather-app-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
